@@ -8,32 +8,47 @@ services:
     buildCommand: cd backend && mvn clean install -DskipTests
     startCommand: java -jar -Dspring.profiles.active=prod backend/target/ems-pro-2.0.0.jar
     envVars:
+      # Database Configuration
+      # IMPORTANT: Set these in Render Dashboard under Environment
+      # Format for MySQL: jdbc:mysql://host:port/database?useSSL=true
+      # Format for PostgreSQL: jdbc:postgresql://host:port/database?sslmode=require
       - key: DATABASE_URL
         sync: false
       - key: DB_USERNAME
         sync: false
       - key: DB_PASSWORD
         sync: false
+      
+      # Security
       - key: JWT_SECRET
         generateValue: true
+      
+      # CORS - Update with your actual Vercel URL
       - key: CORS_ORIGINS
         value: https://ems-pro-rvdv.vercel.app
+      
+      # Application Settings
       - key: SPRING_PROFILE
         value: prod
       - key: DDL_AUTO
-        value: validate
+        value: update
       - key: SHOW_SQL
         value: false
       - key: LOG_LEVEL
         value: INFO
+      - key: APP_LOG_LEVEL
+        value: INFO
+      
+      # Server Configuration
+      - key: PORT
+        value: 10000
+    
     healthCheckPath: /actuator/health
     autoDeploy: true
 
-  # Optional: Database (if not using Aiven)
-  # - type: pserv
-  #   name: ems-pro-db
-  #   env: mysql
-  #   plan: free
-  #   databases:
-  #     - name: ems_db
-  #       user: ems_user
+# If you want to use Render's managed database (PostgreSQL only on free tier)
+# Uncomment this section and update DATABASE_URL accordingly
+# databases:
+#   - name: ems-pro-db
+#     databaseName: ems_db
+#     user: ems_user
