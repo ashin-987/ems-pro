@@ -1,41 +1,29 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../api/axiosInstance';
-import { PageHeader } from '../../components/ui/index.jsx';
-import EmployeeForm from './EmployeeForm';
+import axiosInstance from '../../api/axiosInstance';
 import toast from 'react-hot-toast';
-import { format } from 'date-fns';
+import EmployeeForm from './EmployeeForm';
 
-export default function AddEmployee() {
+const AddEmployee = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (formData) => {
+    setIsLoading(true);
+
     try {
-      await api.post('/employees', {
-        ...values,
-        salary: values.salary ? Number(values.salary) : null,
-      });
+      await axiosInstance.post('/employees', formData);
       toast.success('Employee added successfully!');
       navigate('/employees');
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to add employee';
-      toast.error(msg);
-      // re-throw so react-hook-form keeps isSubmitting=false correctly
-      throw err;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to add employee';
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const defaults = {
-    status: 'ACTIVE',
-    joiningDate: format(new Date(), 'yyyy-MM-dd'),
-  };
+  return <EmployeeForm onSubmit={handleSubmit} isLoading={isLoading} mode="add" />;
+};
 
-  return (
-    <div className="p-8">
-      <PageHeader
-        title="Add Employee"
-        subtitle="Fill in the details below to onboard a new team member"
-      />
-      <EmployeeForm defaultValues={defaults} onSubmit={handleSubmit} />
-    </div>
-  );
-}
+export default AddEmployee;

@@ -1,248 +1,371 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Search, Plus, Pencil, Trash2, ChevronLeft,
-  ChevronRight, SlidersHorizontal, RefreshCw, Users
-} from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import api from '../../api/axiosInstance';
-import { StatusBadge, Modal, Spinner, PageHeader } from '../../components/ui/index.jsx';
+import { useAuth } from '../context/AuthContext';
+import axiosInstance from '../api/axiosInstance';
 import toast from 'react-hot-toast';
+import {
+  Search,
+  Plus,
+  Eye,
+  Edit,
+  Trash2,
+  Download,
+  Filter,
+  RefreshCw,
+} from 'lucide-react';
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  StatusBadge,
+  Pagination,
+  PageLoader,
+  EmptyState,
+  Modal,
+  ModalContent,
+  ModalFooter,
+} from '../components/ui';
 
-const DEPARTMENTS = ['Engineering','HR','Finance','Marketing','Operations','Sales','Legal'];
-
-export default function EmployeeList() {
-  const { user } = useAuth();
+const EmployeeList = () => {
   const navigate = useNavigate();
+  const { canEdit, canDelete } = useAuth();
 
   const [employees, setEmployees] = useState([]);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    status: '',
+    department: '',
+  });
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: 10,
+  });
 
-  // Filters & pagination
-  const [search, setSearch]         = useState('');
-  const [status, setStatus]         = useState('');
-  const [department, setDepartment] = useState('');
-  const [page, setPage]             = useState(0);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    employeeId: null,
+    employeeName: '',
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Delete confirm
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting]         = useState(false);
+  useEffect(() => {
+    fetchEmployees();
+  }, [searchTerm, filters, pagination.currentPage, pagination.pageSize]);
 
-  const fetchEmployees = useCallback(async () => {
+  const fetchEmployees = async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/employees', {
-        params: { search, status, department, page, size: 10, sortBy: 'createdAt', sortDir: 'desc' },
+      const params = {
+        page: pagination.currentPage - 1,
+        size: pagination.pageSize,
+        search: searchTerm,
+        status: filters.status,
+        department: filters.department,
+      };
+
+      const response = await axiosInstance.get('/employees', { params });
+      const data = response.data.data;
+
+      setEmployees(data.content);
+      setPagination({
+        ...pagination,
+        totalPages: data.totalPages,
+        currentPage: data.number + 1,
       });
-      const pg = data.data;
-      setEmployees(pg.content);
-      setTotalPages(pg.totalPages);
-      setTotalElements(pg.totalElements);
-    } catch {
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
       toast.error('Failed to load employees');
     } finally {
       setLoading(false);
     }
-  }, [search, status, department, page]);
+  };
 
-  useEffect(() => { fetchEmployees(); }, [fetchEmployees]);
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setPagination({ ...pagination, currentPage: 1 });
+  };
 
-  // Reset page when filters change
-  useEffect(() => { setPage(0); }, [search, status, department]);
+  const handleFilterChange = (field, value) => {
+    setFilters({ ...filters, [field]: value });
+    setPagination({ ...pagination, currentPage: 1 });
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilters({ status: '', department: '' });
+    setPagination({ ...pagination, currentPage: 1 });
+  };
 
   const handleDelete = async () => {
-    setDeleting(true);
+    setIsDeleting(true);
     try {
-      await api.delete(`/employees/${deleteTarget.id}`);
-      toast.success(`${deleteTarget.name} removed`);
-      setDeleteTarget(null);
+      await axiosInstance.delete(`/employees/${deleteModal.employeeId}`);
+      toast.success('Employee deleted successfully');
       fetchEmployees();
-    } catch (e) {
-      toast.error(e.response?.data?.message || 'Delete failed');
+      setDeleteModal({ isOpen: false, employeeId: null, employeeName: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to delete employee');
     } finally {
-      setDeleting(false);
+      setIsDeleting(false);
     }
   };
 
-  const canEdit   = ['ADMIN','HR'].includes(user?.role);
-  const canDelete = user?.role === 'ADMIN';
+  const exportToCSV = () => {
+    if (employees.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    const headers = ['ID', 'Name', 'Email', 'Department', 'Position', 'Status', 'Joining Date'];
+    const csvData = employees.map(emp => [
+      emp.employeeCode,
+      emp.name,
+      emp.email,
+      emp.department,
+      emp.position,
+      emp.status,
+      emp.joiningDate,
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `employees_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast.success('CSV exported successfully');
+  };
+
+  if (loading && employees.length === 0) {
+    return <PageLoader message="Loading employees..." />;
+  }
 
   return (
-    <div className="p-8">
-      <PageHeader
-        title="Employees"
-        subtitle={`${totalElements} total records`}
-        actions={
-          canEdit && (
-            <button className="btn-primary" onClick={() => navigate('/employees/new')}>
-              <Plus size={16} /> Add Employee
-            </button>
-          )
-        }
-      />
-
-      {/* Filters */}
-      <div className="card mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name, email, ID…"
-            className="input-field pl-9 text-sm"
-          />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
+          <p className="text-gray-600 mt-1">Manage your organization's employees</p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal size={15} className="text-slate-400" />
-          <select value={status} onChange={e => setStatus(e.target.value)} className="input-field text-sm w-36">
-            <option value="">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-            <option value="ON_LEAVE">On Leave</option>
-          </select>
-          <select value={department} onChange={e => setDepartment(e.target.value)} className="input-field text-sm w-40">
-            <option value="">All Departments</option>
-            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <button
-            onClick={() => { setSearch(''); setStatus(''); setDepartment(''); }}
-            className="btn-secondary text-sm py-1.5"
-          >
-            <RefreshCw size={14} /> Reset
-          </button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={exportToCSV}>
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+          {canEdit && (
+            <Button onClick={() => navigate('/employees/add')}>
+              <Plus className="h-4 w-4" />
+              Add Employee
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="card p-0 overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center py-16"><Spinner size={28} /></div>
-        ) : employees.length === 0 ? (
-          <div className="text-center py-16 text-slate-400">
-            <Users size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No employees found</p>
-            <p className="text-sm mt-1">Try adjusting your search filters</p>
+      {/* Filters Card */}
+      <Card>
+        <div className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="md:col-span-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search by name, email, or employee code..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <Select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+                <option value="On Leave">On Leave</option>
+              </Select>
+            </div>
+
+            {/* Department Filter */}
+            <div>
+              <Select
+                value={filters.department}
+                onChange={(e) => handleFilterChange('department', e.target.value)}
+              >
+                <option value="">All Departments</option>
+                <option value="Engineering">Engineering</option>
+                <option value="HR">HR</option>
+                <option value="Sales">Sales</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Finance">Finance</option>
+                <option value="Operations">Operations</option>
+              </Select>
+            </div>
           </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                {['Emp Code','Name','Designation','Department','Phone','Status','Actions'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {employees.map(emp => (
-                <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-500">{emp.empCode}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0">
-                        {emp.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-800">{emp.name}</p>
-                        <p className="text-xs text-slate-400">{emp.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{emp.designation}</td>
-                  <td className="px-4 py-3 text-slate-500">{emp.department || '—'}</td>
-                  <td className="px-4 py-3 text-slate-500">{emp.phone || '—'}</td>
-                  <td className="px-4 py-3"><StatusBadge status={emp.status} /></td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1">
+
+          {(searchTerm || filters.status || filters.department) && (
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                onClick={clearFilters}
+                className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Clear Filters
+              </button>
+              <span className="text-sm text-gray-500">
+                {employees.length} result{employees.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Employees Table */}
+      {employees.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={Search}
+            title="No employees found"
+            message={
+              searchTerm || filters.status || filters.department
+                ? 'Try adjusting your search or filters'
+                : 'Get started by adding your first employee'
+            }
+            action={
+              canEdit && !searchTerm && !filters.status && !filters.department ? (
+                <Button onClick={() => navigate('/employees/add')}>
+                  <Plus className="h-4 w-4" />
+                  Add Employee
+                </Button>
+              ) : null
+            }
+          />
+        </Card>
+      ) : (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee Code</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="hide-on-mobile">Email</TableHead>
+                <TableHead className="hide-on-mobile">Department</TableHead>
+                <TableHead className="hide-on-mobile">Position</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {employees.map((employee) => (
+                <TableRow key={employee.id}>
+                  <TableCell className="font-medium">{employee.employeeCode}</TableCell>
+                  <TableCell>{employee.name}</TableCell>
+                  <TableCell className="hide-on-mobile text-gray-600">{employee.email}</TableCell>
+                  <TableCell className="hide-on-mobile">{employee.department}</TableCell>
+                  <TableCell className="hide-on-mobile">{employee.position}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={employee.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => navigate(`/employees/view/${employee.id}`)}
+                        className="p-2 text-gray-600 hover:text-primary-600 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="View"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                       {canEdit && (
                         <button
-                          onClick={() => navigate(`/employees/${emp.id}/edit`)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                          onClick={() => navigate(`/employees/edit/${employee.id}`)}
+                          className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           title="Edit"
                         >
-                          <Pencil size={15} />
+                          <Edit className="h-4 w-4" />
                         </button>
                       )}
                       {canDelete && (
                         <button
-                          onClick={() => setDeleteTarget(emp)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          onClick={() =>
+                            setDeleteModal({
+                              isOpen: true,
+                              employeeId: employee.id,
+                              employeeName: employee.name,
+                            })
+                          }
+                          className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           title="Delete"
                         >
-                          <Trash2 size={15} />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        )}
+            </TableBody>
+          </Table>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
-            <p className="text-xs text-slate-500">
-              Page {page + 1} of {totalPages}
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setPage(p => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              {Array.from({ length: Math.min(totalPages, 5) }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPage(i)}
-                  className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${
-                    page === i
-                      ? 'bg-primary-600 text-white'
-                      : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-              <button
-                onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={page >= totalPages - 1}
-                className="btn-secondary py-1 px-2 text-xs disabled:opacity-40"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={(page) => setPagination({ ...pagination, currentPage: page })}
+            />
+          )}
+        </Card>
+      )}
 
-      {/* Delete confirm modal */}
+      {/* Delete Confirmation Modal */}
       <Modal
-        open={!!deleteTarget}
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, employeeId: null, employeeName: '' })}
         title="Delete Employee"
-        onClose={() => setDeleteTarget(null)}
       >
-        <p className="text-slate-600 text-sm mb-6">
-          Are you sure you want to permanently delete{' '}
-          <span className="font-semibold text-slate-800">{deleteTarget?.name}</span>?
-          This action cannot be undone.
-        </p>
-        <div className="flex justify-end gap-3">
-          <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
+        <ModalContent>
+          <p className="text-gray-700">
+            Are you sure you want to delete <strong>{deleteModal.employeeName}</strong>? This action
+            cannot be undone.
+          </p>
+        </ModalContent>
+        <ModalFooter>
+          <Button
+            variant="outline"
+            onClick={() => setDeleteModal({ isOpen: false, employeeId: null, employeeName: '' })}
+          >
             Cancel
-          </button>
-          <button className="btn-danger" onClick={handleDelete} disabled={deleting}>
-            {deleting ? <><Spinner size={14} /> Deleting…</> : <><Trash2 size={14} /> Delete</>}
-          </button>
-        </div>
+          </Button>
+          <Button variant="danger" onClick={handleDelete} isLoading={isDeleting}>
+            Delete
+          </Button>
+        </ModalFooter>
       </Modal>
     </div>
   );
-}
+};
+
+export default EmployeeList;

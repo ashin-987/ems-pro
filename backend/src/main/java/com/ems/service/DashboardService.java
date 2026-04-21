@@ -19,7 +19,8 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardResponse getStats() {
-        long total    = employeeRepository.count();
+        // Count by status (with soft delete filtering)
+        long total    = employeeRepository.countByDeletedAtIsNull();
         long active   = employeeRepository.countByStatus(Employee.EmployeeStatus.ACTIVE);
         long inactive = employeeRepository.countByStatus(Employee.EmployeeStatus.INACTIVE);
         long onLeave  = employeeRepository.countByStatus(Employee.EmployeeStatus.ON_LEAVE);
@@ -51,6 +52,7 @@ public class DashboardService {
                 .totalMonthlySalary(employeeRepository.sumActiveSalaries())
                 .employeesByDepartment(byDept)
                 .monthlyJoinStats(monthly)
-                .build();
+                .build()
+;
     }
 }

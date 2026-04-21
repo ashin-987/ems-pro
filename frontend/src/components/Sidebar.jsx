@@ -1,96 +1,176 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import {
-  LayoutDashboard, Users, UserPlus, LogOut,
-  Building2, ShieldCheck
-} from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import toast from 'react-hot-toast';
+import { 
+  LayoutDashboard, 
+  Users, 
+  UserPlus, 
+  UserCircle,
+  X,
+  Building2
+} from 'lucide-react';
 
-const navItems = [
-  { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard',    end: true  },
-  { to: '/employees',     icon: Users,            label: 'Employees',   end: true  },
-  { to: '/employees/new', icon: UserPlus,         label: 'Add Employee', end: false },
-];
+const Sidebar = ({ isOpen, onClose }) => {
+  const { user, canViewDashboard } = useAuth();
 
-const roleColors = {
-  ADMIN:   'bg-purple-100 text-purple-700',
-  HR:      'bg-blue-100   text-blue-700',
-  MANAGER: 'bg-green-100  text-green-700',
-  VIEWER:  'bg-slate-100  text-slate-600',
-};
-
-export default function Sidebar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    toast.success('Logged out successfully');
-    navigate('/login');
-  };
+  const navigationItems = [
+    {
+      name: 'Dashboard',
+      href: '/dashboard',
+      icon: LayoutDashboard,
+      show: canViewDashboard,
+    },
+    {
+      name: 'Employees',
+      href: '/employees',
+      icon: Users,
+      show: true,
+    },
+    {
+      name: 'Add Employee',
+      href: '/employees/add',
+      icon: UserPlus,
+      show: user?.role === 'ADMIN' || user?.role === 'HR',
+    },
+    {
+      name: 'My Profile',
+      href: '/profile',
+      icon: UserCircle,
+      show: true,
+    },
+  ];
 
   return (
-    <aside className="w-64 min-h-screen bg-slate-900 flex flex-col">
-      {/* Brand */}
-      <div className="px-6 py-5 border-b border-slate-700">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center">
-            <Building2 size={20} className="text-white" />
+    <>
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 pt-5 pb-4 overflow-y-auto">
+          {/* Logo */}
+          <div className="flex items-center flex-shrink-0 px-6">
+            <Building2 className="h-8 w-8 text-primary-600" />
+            <span className="ml-3 text-xl font-bold text-gray-900">EMS Pro</span>
           </div>
-          <div>
-            <p className="text-white font-semibold text-sm leading-tight">EMS Pro</p>
-            <p className="text-slate-400 text-xs">Employee Management</p>
+
+          {/* User Info */}
+          <div className="mt-6 px-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <span className="text-primary-700 font-semibold text-sm">
+                  {user?.username?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">{user?.username}</p>
+                <p className="text-xs text-gray-500">{user?.role}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className="mt-8 flex-1 px-3 space-y-1">
+            {navigationItems
+              .filter(item => item.show)
+              .map((item) => (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  className={({ isActive }) =>
+                    `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    }`
+                  }
+                >
+                  <item.icon
+                    className="mr-3 flex-shrink-0 h-5 w-5"
+                    aria-hidden="true"
+                  />
+                  {item.name}
+                </NavLink>
+              ))}
+          </nav>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-gray-200">
+            <p className="text-xs text-gray-500 text-center">
+              © 2024 EMS Pro v2.0
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map(({ to, icon: Icon, label, end }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={end}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150 ${
-                isActive
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`
-            }
-          >
-            <Icon size={18} />
-            {label}
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* User card */}
-      <div className="px-4 pb-5 space-y-3">
-        <div className="bg-slate-800 rounded-xl p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-primary-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-              {user?.fullName?.charAt(0).toUpperCase()}
+      {/* Mobile Sidebar */}
+      <div
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out lg:hidden ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-200">
+            <div className="flex items-center">
+              <Building2 className="h-8 w-8 text-primary-600" />
+              <span className="ml-3 text-xl font-bold text-gray-900">EMS Pro</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-medium truncate">{user?.fullName}</p>
-              <p className="text-slate-400 text-xs truncate">@{user?.username}</p>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+
+          {/* User Info */}
+          <div className="px-6 py-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <span className="text-primary-700 font-semibold text-sm">
+                  {user?.username?.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-900">{user?.username}</p>
+                <p className="text-xs text-gray-500">{user?.role}</p>
+              </div>
             </div>
           </div>
-          <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${roleColors[user?.role] || 'bg-slate-100 text-slate-600'}`}>
-            <ShieldCheck size={11} />
-            {user?.role}
-          </span>
-        </div>
 
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors"
-        >
-          <LogOut size={16} />
-          Logout
-        </button>
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            {navigationItems
+              .filter(item => item.show)
+              .map((item) => (
+                <NavLink
+                  key={item.name}
+                  to={item.href}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-primary-50 text-primary-700'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                    }`
+                  }
+                >
+                  <item.icon
+                    className="mr-3 flex-shrink-0 h-5 w-5"
+                    aria-hidden="true"
+                  />
+                  {item.name}
+                </NavLink>
+              ))}
+          </nav>
+
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-gray-200">
+            <p className="text-xs text-gray-500 text-center">
+              © 2024 EMS Pro v2.0
+            </p>
+          </div>
+        </div>
       </div>
-    </aside>
+    </>
   );
-}
+};
+
+export default Sidebar;

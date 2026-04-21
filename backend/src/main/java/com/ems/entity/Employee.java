@@ -2,8 +2,11 @@ package com.ems.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -11,7 +14,13 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "employees")
+@Table(name = "employees", indexes = {
+        @Index(name = "idx_employee_code", columnList = "emp_code"),
+        @Index(name = "idx_department", columnList = "department"),
+        @Index(name = "idx_status", columnList = "status"),
+        @Index(name = "idx_deleted_at", columnList = "deleted_at")
+})
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -66,13 +75,26 @@ public class Employee {
     @Column(name = "joining_date")
     private LocalDate joiningDate;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
+    // Soft Delete Field (V2 addition)
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    // Audit Fields (V2 addition)
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
+    @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @CreatedBy
+    @Column(name = "created_by", length = 100)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by", length = 100)
+    private String updatedBy;
 
     @PrePersist
     public void prePersist() {
@@ -86,5 +108,23 @@ public class Employee {
 
     public enum EmployeeStatus {
         ACTIVE, INACTIVE, ON_LEAVE
+    }
+
+    // Compatibility method for v2 code that uses getEmployeeCode()
+    public String getEmployeeCode() {
+        return this.empCode;
+    }
+
+    public void setEmployeeCode(String employeeCode) {
+        this.empCode = employeeCode;
+    }
+
+    // Compatibility method for v2 code that uses getPosition()
+    public String getPosition() {
+        return this.designation;
+    }
+
+    public void setPosition(String position) {
+        this.designation = position;
     }
 }

@@ -1,0 +1,39 @@
+services:
+  # Backend Service
+  - type: web
+    name: ems-pro-backend
+    env: java
+    region: oregon
+    plan: free
+    buildCommand: cd backend && mvn clean install -DskipTests
+    startCommand: java -jar -Dspring.profiles.active=prod backend/target/ems-pro-2.0.0.jar
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://ems-pro-rvdv.vercel.app
+      - key: SPRING_PROFILE
+        value: prod
+      - key: DDL_AUTO
+        value: validate
+      - key: SHOW_SQL
+        value: false
+      - key: LOG_LEVEL
+        value: INFO
+    healthCheckPath: /actuator/health
+    autoDeploy: true
+
+  # Optional: Database (if not using Aiven)
+  # - type: pserv
+  #   name: ems-pro-db
+  #   env: mysql
+  #   plan: free
+  #   databases:
+  #     - name: ems_db
+  #       user: ems_user

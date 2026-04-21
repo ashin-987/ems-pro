@@ -1,8 +1,10 @@
 package com.ems.dto.response;
 
 import com.ems.entity.Employee;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -10,6 +12,8 @@ import java.time.LocalDateTime;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class EmployeeResponse {
     private String id;
     private String empCode;
@@ -28,6 +32,10 @@ public class EmployeeResponse {
     private LocalDate joiningDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // V2 audit fields
+    private String createdBy;
+    private String updatedBy;
 
     public static EmployeeResponse fromEntity(Employee e) {
         return EmployeeResponse.builder()
@@ -48,6 +56,25 @@ public class EmployeeResponse {
                 .joiningDate(e.getJoiningDate())
                 .createdAt(e.getCreatedAt())
                 .updatedAt(e.getUpdatedAt())
+                .createdBy(e.getCreatedBy())
+                .updatedBy(e.getUpdatedBy())
                 .build();
+    }
+
+    // Compatibility getters/setters for v2 code
+    public String getEmployeeCode() {
+        return this.empCode;
+    }
+
+    public void setEmployeeCode(String employeeCode) {
+        this.empCode = employeeCode;
+    }
+
+    public String getPosition() {
+        return this.designation;
+    }
+
+    public void setPosition(String position) {
+        this.designation = position;
     }
 }

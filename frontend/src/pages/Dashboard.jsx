@@ -1,123 +1,184 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import axiosInstance from '../api/axiosInstance';
+import { Users, UserCheck, UserX, TrendingUp } from 'lucide-react';
 import {
-  Users, UserCheck, UserX, UserMinus, IndianRupee, TrendingUp
-} from 'lucide-react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
 } from 'recharts';
-import api from '../api/axiosInstance';
-import { Spinner, PageHeader } from '../components/ui/index.jsx';
+import { Card, CardHeader, CardTitle, CardContent, StatCard, PageLoader } from '../components/ui';
 
-const DEPT_COLORS = ['#6366f1','#06b6d4','#f59e0b','#10b981','#f43f5e','#8b5cf6','#ec4899'];
-
-function StatCard({ icon: Icon, label, value, sub, color }) {
-  return (
-    <div className="card flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
-        <Icon size={22} className="text-white" />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-slate-800">{value ?? '—'}</p>
-        <p className="text-sm text-slate-500">{label}</p>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
-      </div>
-    </div>
-  );
-}
-
-export default function Dashboard() {
-  const [stats, setStats] = useState(null);
+const Dashboard = () => {
+  const { user } = useAuth();
+  const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/dashboard')
-      .then(r => setStats(r.data.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    fetchDashboardData();
   }, []);
 
+  const fetchDashboardData = async () => {
+    try {
+      const response = await axiosInstance.get('/dashboard');
+      setDashboardData(response.data.data);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
+    return <PageLoader message="Loading dashboard..." />;
+  }
+
+  if (!dashboardData) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <Spinner size={32} />
+      <div className="text-center py-12">
+        <p className="text-gray-600">Failed to load dashboard data</p>
       </div>
     );
   }
 
-  const deptData = stats
-    ? Object.entries(stats.employeesByDepartment).map(([name, value]) => ({ name, value }))
-    : [];
+  const { totalEmployees, activeEmployees, inactiveEmployees, onLeave, departmentStats, monthlyJoinings } = dashboardData;
 
-  const formatSalary = (val) =>
-    val ? `₹${Number(val).toLocaleString('en-IN')}` : '₹0';
+  // Colors for charts
+  const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
 
   return (
-    <div className="p-8">
-      <PageHeader
-        title="Dashboard"
-        subtitle="Overview of your workforce"
-      />
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Users}      label="Total Employees"  value={stats?.totalEmployees}   color="bg-primary-600" />
-        <StatCard icon={UserCheck}  label="Active"           value={stats?.activeEmployees}  color="bg-emerald-500" />
-        <StatCard icon={UserMinus}  label="On Leave"         value={stats?.onLeaveEmployees} color="bg-amber-500"   />
-        <StatCard icon={UserX}      label="Inactive"         value={stats?.inactiveEmployees} color="bg-red-500"   />
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-1">Welcome back, {user?.username}!</p>
       </div>
 
-      {/* Salary + charts row */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
-        {/* Monthly salary */}
-        <div className="card flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-violet-600 flex items-center justify-center">
-            <IndianRupee size={22} className="text-white" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-slate-800">
-              {formatSalary(stats?.totalMonthlySalary)}
-            </p>
-            <p className="text-sm text-slate-500">Total Active Monthly Salary</p>
-          </div>
-        </div>
-
-        {/* Department donut */}
-        <div className="card xl:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={18} className="text-primary-600" />
-            <h2 className="font-semibold text-slate-700">Employees by Department</h2>
-          </div>
-          {deptData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}>
-                  {deptData.map((_, i) => (
-                    <Cell key={i} fill={DEPT_COLORS[i % DEPT_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend iconType="circle" iconSize={8} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-slate-400 text-sm text-center py-10">No department data yet</p>
-          )}
-        </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Total Employees"
+          value={totalEmployees || 0}
+          icon={Users}
+          color="primary"
+        />
+        <StatCard
+          title="Active Employees"
+          value={activeEmployees || 0}
+          icon={UserCheck}
+          color="success"
+        />
+        <StatCard
+          title="Inactive"
+          value={inactiveEmployees || 0}
+          icon={UserX}
+          color="danger"
+        />
+        <StatCard
+          title="On Leave"
+          value={onLeave || 0}
+          icon={TrendingUp}
+          color="warning"
+        />
       </div>
 
-      {/* Monthly joins bar chart */}
-      <div className="card">
-        <h2 className="font-semibold text-slate-700 mb-4">Monthly Joinings (This Year)</h2>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={stats?.monthlyJoinStats || []} barSize={28}>
-            <XAxis dataKey="month" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-            <Tooltip cursor={{ fill: '#f1f5f9' }} />
-            <Bar dataKey="count" name="Joinings" fill="#6366f1" radius={[6, 6, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Department Distribution */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Department Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {departmentStats && departmentStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={departmentStats}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="count"
+                  >
+                    {departmentStats.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500">
+                No department data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Monthly Joinings */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Joinings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {monthlyJoinings && monthlyJoinings.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyJoinings}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="count" fill="#6366f1" name="New Joinings" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-gray-500">
+                No joining data available
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Quick Stats Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-700">Total Departments</h4>
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {departmentStats?.length || 0}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-700">Avg. per Department</h4>
+              <p className="mt-2 text-2xl font-bold text-gray-900">
+                {departmentStats && departmentStats.length > 0
+                  ? Math.round(totalEmployees / departmentStats.length)
+                  : 0}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default Dashboard;

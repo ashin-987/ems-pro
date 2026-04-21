@@ -1,130 +1,137 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { Eye, EyeOff, Building2, Lock, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Spinner } from '../components/ui/index.jsx';
-import toast from 'react-hot-toast';
+import { Building2, Loader2, Lock, User } from 'lucide-react';
+import { Button, Input, FormField, Alert } from '../components/ui';
 
-export default function Login() {
-  const { login } = useAuth();
+const Login = () => {
   const navigate = useNavigate();
-  const [showPwd, setShowPwd] = useState(false);
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm();
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+    setError('');
+  };
 
-  const onSubmit = async ({ username, password }) => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!formData.username || !formData.password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
-      await login(username, password);
-      toast.success('Welcome back!');
-      navigate('/dashboard');
+      const result = await login(formData.username, formData.password);
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.error);
+      }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login failed. Please check your credentials.';
-      toast.error(msg);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left decorative panel */}
-      <div className="hidden lg:flex flex-col justify-between w-1/2 bg-gradient-to-br from-slate-900 via-primary-900 to-primary-700 p-12 text-white">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur">
-            <Building2 size={22} />
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo & Title */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
+            <Building2 className="h-10 w-10 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight">EMS Pro</span>
+          <h1 className="text-3xl font-bold text-gray-900">EMS Pro</h1>
+          <p className="mt-2 text-gray-600">Employee Management System</p>
         </div>
 
-        <div>
-          <h1 className="text-4xl font-bold leading-tight mb-4">
-            Manage your <br />
-            <span className="text-primary-300">workforce</span> smarter
-          </h1>
-          <p className="text-slate-300 text-lg leading-relaxed">
-            Secure, fast, and modern employee management built for teams that move fast.
-          </p>
-        </div>
+        {/* Login Card */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Welcome Back</h2>
 
-        {/* Feature pills */}
-        <div className="space-y-3">
-          {['JWT-secured authentication', 'Role-based access control', 'Real-time dashboard analytics'].map(f => (
-            <div key={f} className="flex items-center gap-3 text-sm text-slate-300">
-              <div className="w-1.5 h-1.5 bg-primary-400 rounded-full" />
-              {f}
-            </div>
-          ))}
-        </div>
-      </div>
+          {error && (
+            <Alert type="error" message={error} onClose={() => setError('')} className="mb-6" />
+          )}
 
-      {/* Right login form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-white">
-        <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-slate-800">Sign in</h2>
-            <p className="text-slate-500 text-sm mt-1">Enter your credentials to continue</p>
-          </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {/* Username */}
-            <div>
-              <label className="label">Username</label>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <FormField label="Username" required>
               <div className="relative">
-                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  {...register('username', { required: 'Username is required' })}
-                  className={`input-field pl-9 ${errors.username ? 'input-error' : ''}`}
-                  placeholder="admin"
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  type="text"
+                  name="username"
+                  placeholder="Enter your username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className="pl-10"
+                  disabled={isLoading}
                   autoComplete="username"
                 />
               </div>
-              {errors.username && (
-                <p className="mt-1 text-xs text-red-600">{errors.username.message}</p>
-              )}
-            </div>
+            </FormField>
 
-            {/* Password */}
-            <div>
-              <label className="label">Password</label>
+            <FormField label="Password" required>
               <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  {...register('password', { required: 'Password is required' })}
-                  type={showPwd ? 'text' : 'password'}
-                  className={`input-field pl-9 pr-10 ${errors.password ? 'input-error' : ''}`}
-                  placeholder="••••••••"
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  type="password"
+                  name="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="pl-10"
+                  disabled={isLoading}
                   autoComplete="current-password"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                >
-                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
               </div>
-              {errors.password && (
-                <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
-              )}
-            </div>
+            </FormField>
 
-            <button
+            <Button
               type="submit"
-              disabled={isSubmitting}
-              className="btn-primary w-full justify-center py-2.5"
+              className="w-full"
+              size="lg"
+              isLoading={isLoading}
+              disabled={isLoading}
             >
-              {isSubmitting ? <><Spinner size={16} /> Signing in…</> : 'Sign in'}
-            </button>
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </Button>
           </form>
 
-          <p className="mt-8 text-center text-xs text-slate-400">
-            Default credentials: <span className="font-mono font-medium text-slate-600">admin / Admin@123</span>
-          </p>
+          {/* Demo Credentials */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-xs font-semibold text-gray-700 mb-2">Demo Credentials:</p>
+            <div className="text-xs text-gray-600 space-y-1">
+              <p>
+                <span className="font-medium">Username:</span> admin
+              </p>
+              <p>
+                <span className="font-medium">Password:</span> Admin@123
+              </p>
+            </div>
+          </div>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-sm text-gray-600 mt-6">
+          © 2024 EMS Pro. All rights reserved.
+        </p>
       </div>
     </div>
   );
-}
+};
+
+export default Login;

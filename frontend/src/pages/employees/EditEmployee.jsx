@@ -1,65 +1,53 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import api from '../../api/axiosInstance';
-import { PageHeader, Spinner } from '../../components/ui/index.jsx';
-import EmployeeForm from './EmployeeForm';
+import axiosInstance from '../../api/axiosInstance';
 import toast from 'react-hot-toast';
+import EmployeeForm from './EmployeeForm';
+import { PageLoader } from '../../components/ui';
 
-export default function EditEmployee() {
+const EditEmployee = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [employee, setEmployee] = useState(null);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    api.get(`/employees/${id}`)
-      .then(r => setEmployee(r.data.data))
-      .catch(() => { toast.error('Employee not found'); navigate('/employees'); })
-      .finally(() => setLoading(false));
-  }, [id, navigate]);
+    fetchEmployee();
+  }, [id]);
 
-  const handleSubmit = async (values) => {
+  const fetchEmployee = async () => {
     try {
-      await api.put(`/employees/${id}`, {
-        ...values,
-        salary: values.salary ? Number(values.salary) : null,
-      });
+      const response = await axiosInstance.get(`/employees/${id}`);
+      setEmployee(response.data.data);
+    } catch (error) {
+      toast.error('Failed to load employee details');
+      navigate('/employees');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (formData) => {
+    setIsSubmitting(true);
+
+    try {
+      await axiosInstance.put(`/employees/${id}`, formData);
       toast.success('Employee updated successfully!');
       navigate('/employees');
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Update failed');
-      throw err;
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to update employee';
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   if (loading) {
-    return <div className="h-full flex items-center justify-center"><Spinner size={32} /></div>;
+    return <PageLoader message="Loading employee details..." />;
   }
 
-  // Map entity fields to form defaults
-  const defaults = {
-    name:         employee.name,
-    fatherName:   employee.fatherName,
-    dateOfBirth:  employee.dateOfBirth,
-    email:        employee.email,
-    phone:        employee.phone,
-    address:      employee.address,
-    designation:  employee.designation,
-    department:   employee.department,
-    salary:       employee.salary,
-    education:    employee.education,
-    aadharNumber: employee.aadharNumber,
-    status:       employee.status,
-    joiningDate:  employee.joiningDate,
-  };
+  return <EmployeeForm employee={employee} onSubmit={handleSubmit} isLoading={isSubmitting} mode="edit" />;
+};
 
-  return (
-    <div className="p-8">
-      <PageHeader
-        title="Edit Employee"
-        subtitle={`Updating record for ${employee.name} · ${employee.empCode}`}
-      />
-      <EmployeeForm defaultValues={defaults} onSubmit={handleSubmit} isEdit />
-    </div>
-  );
-}
+export default EditEmployee;

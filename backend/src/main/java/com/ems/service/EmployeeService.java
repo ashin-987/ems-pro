@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Service
@@ -19,6 +20,9 @@ public class EmployeeService {
 
     private final EmployeeRepository employeeRepository;
 
+    /**
+     * Create new employee (original method signature)
+     */
     @Transactional
     public EmployeeResponse create(EmployeeRequest req) {
         if (employeeRepository.existsByEmail(req.getEmail())) {
@@ -29,11 +33,17 @@ public class EmployeeService {
         return EmployeeResponse.fromEntity(employeeRepository.save(emp));
     }
 
+    /**
+     * Get employee by ID (original method signature with soft delete check)
+     */
     @Transactional(readOnly = true)
     public EmployeeResponse getById(String id) {
         return EmployeeResponse.fromEntity(findById(id));
     }
 
+    /**
+     * Search employees with filters (original method signature with soft delete)
+     */
     @Transactional(readOnly = true)
     public Page<EmployeeResponse> search(String search, String status, String department,
                                           int page, int size, String sortBy, String sortDir) {
@@ -52,6 +62,9 @@ public class EmployeeService {
                 .map(EmployeeResponse::fromEntity);
     }
 
+    /**
+     * Update existing employee (original method signature)
+     */
     @Transactional
     public EmployeeResponse update(String id, EmployeeRequest req) {
         Employee emp = findById(id);
@@ -64,17 +77,75 @@ public class EmployeeService {
         return EmployeeResponse.fromEntity(employeeRepository.save(mapToEntity(emp, req)));
     }
 
+    /**
+     * Delete employee (original method signature - now with soft delete)
+     */
     @Transactional
     public void delete(String id) {
         Employee emp = findById(id);
-        employeeRepository.delete(emp);
+        // Soft delete instead of hard delete (V2 enhancement)
+        emp.setDeletedAt(LocalDateTime.now());
+        employeeRepository.save(emp);
     }
 
+    // ============ V2 METHODS (for v2 compatibility) ============
+
+    /**
+     * Get all active employees with pagination, search, and filters (V2 method)
+     */
+    public Page<EmployeeResponse> getAllEmployees(
+            String search,
+            String status,
+            String department,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        return this.search(search, status, department, page, size, sortBy, sortDir);
+    }
+
+    /**
+     * Create new employee (V2 method signature)
+     */
+    public EmployeeResponse createEmployee(EmployeeRequest request) {
+        return this.create(request);
+    }
+
+    /**
+     * Update existing employee (V2 method signature)
+     */
+    public EmployeeResponse updateEmployee(String id, EmployeeRequest request) {
+        return this.update(id, request);
+    }
+
+    /**
+     * Soft delete employee (V2 method signature)
+     */
+    public void deleteEmployee(String id) {
+        this.delete(id);
+    }
+
+    /**
+     * Get employee by ID (V2 method signature)
+     */
+    public EmployeeResponse getEmployeeById(String id) {
+        return this.getById(id);
+    }
+
+    // ============ PRIVATE HELPER METHODS ============
+
+    /**
+     * Find employee by ID with soft delete check
+     */
     private Employee findById(String id) {
-        return employeeRepository.findById(id)
+        return employeeRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
     }
 
+    /**
+     * Map request DTO to entity
+     */
     private Employee mapToEntity(Employee emp, EmployeeRequest req) {
         emp.setName(req.getName());
         emp.setFatherName(req.getFatherName());
@@ -92,9 +163,12 @@ public class EmployeeService {
         return emp;
     }
 
+    /**
+     * Generate unique employee code (format: EMP-YY-XXXX)
+     */
     private String generateEmpCode() {
         String prefix = "EMP-" + DateTimeFormatter.ofPattern("yy").format(LocalDate.now()) + "-";
-        long count = employeeRepository.count() + 1;
+        long count = employeeRepository.countByDeletedAtIsNull() + 1;
         return prefix + String.format("%04d", count);
     }
 }

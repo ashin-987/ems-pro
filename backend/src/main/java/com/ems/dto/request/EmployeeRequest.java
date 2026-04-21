@@ -48,4 +48,13 @@ public class EmployeeRequest {
     private Employee.EmployeeStatus status;
 
     private LocalDate joiningDate;
+
+    // V2 compatibility: position is an alias for designation
+    public String getPosition() {
+        return this.designation;
+    }
+
+    public void setPosition(String position) {
+        this.designation = position;
+    }
 }

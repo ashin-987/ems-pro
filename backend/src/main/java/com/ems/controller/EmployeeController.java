@@ -56,6 +56,6 @@ public class EmployeeController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable String id) {
         employeeService.delete(id);
-        return ResponseEntity.ok(ApiResponse.ok("Employee deleted successfully", null));
+        return ResponseEntity.ok(ApiResponse.ok("Employee deleted successfully (soft delete)", null));
     }
 }

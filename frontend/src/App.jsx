@@ -1,42 +1,47 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import Layout from './components/Layout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import EmployeeList from './pages/employees/EmployeeList';
-import AddEmployee from './pages/employees/AddEmployee';
-import EditEmployee from './pages/employees/EditEmployee';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
+import Layout from './components/Layout'
 
-export default function App() {
+// Pages
+import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
+import Profile from './pages/Profile'
+import EmployeeList from './pages/employees/EmployeeList'
+import AddEmployee from './pages/employees/AddEmployee'
+import EditEmployee from './pages/employees/EditEmployee'
+import EmployeeDetail from './pages/employees/EmployeeDetail'
+
+function App() {
+  const { user } = useAuth()
+
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: { borderRadius: '10px', fontSize: '14px' },
-            success: { iconTheme: { primary: '#6366f1', secondary: '#fff' } },
-          }}
+    <Router>
+      <Routes>
+        {/* Public Route */}
+        <Route 
+          path="/login" 
+          element={user ? <Navigate to="/dashboard" replace /> : <Login />} 
         />
-        <Routes>
-          <Route path="/login" element={<Login />} />
 
-          <Route element={<ProtectedRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/"           element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard"  element={<Dashboard />} />
-              <Route path="/employees"        element={<EmployeeList />} />
-              <Route path="/employees/new"    element={<AddEmployee />} />
-              <Route path="/employees/:id/edit" element={<EditEmployee />} />
-            </Route>
-          </Route>
+        {/* Protected Routes - All wrapped in Layout */}
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/employees" element={<EmployeeList />} />
+          <Route path="/employees/add" element={<AddEmployee />} />
+          <Route path="/employees/edit/:id" element={<EditEmployee />} />
+          <Route path="/employees/view/:id" element={<EmployeeDetail />} />
+        </Route>
 
-          {/* Catch-all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  );
+        {/* Default Redirect */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* 404 Fallback */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Router>
+  )
 }
+
+export default App
