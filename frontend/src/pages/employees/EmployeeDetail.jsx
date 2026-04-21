@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import axiosInstance from '../api/axiosInstance';
+import { useAuth } from '../../context/AuthContext';
+import axiosInstance from '../../api/axiosInstance';
 import toast from 'react-hot-toast';
 import {
   ArrowLeft,
@@ -14,7 +14,7 @@ import {
   MapPin,
   DollarSign,
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent, Button, StatusBadge, PageLoader } from '../components/ui';
+import { Card, CardHeader, CardTitle, CardContent, Button, StatusBadge, PageLoader } from '../../components/ui';
 import { format } from 'date-fns';
 
 const EmployeeDetail = () => {

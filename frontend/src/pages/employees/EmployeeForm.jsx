@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save } from 'lucide-react';
-import { Button, Input, Select, Textarea, FormField, Card, CardContent } from '../components/ui';
+import { Button, Input, Select, Textarea, FormField, Card, CardContent } from '../../components/ui';
 
 const EmployeeForm = ({ employee, onSubmit, isLoading, mode = 'add' }) => {
   const navigate = useNavigate();

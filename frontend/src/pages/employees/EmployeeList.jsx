@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import axiosInstance from '../api/axiosInstance';
+import { useAuth } from '../../context/AuthContext';
+import axiosInstance from '../../api/axiosInstance';
 import toast from 'react-hot-toast';
 import {
   Search,
@@ -31,7 +31,7 @@ import {
   Modal,
   ModalContent,
   ModalFooter,
-} from '../components/ui';
+} from '../../components/ui';
 
 const EmployeeList = () => {
   const navigate = useNavigate();
