@@ -15,7 +15,7 @@ const EmployeeForm = ({ employee, onSubmit, isLoading, mode = 'add' }) => {
     position: '',
     salary: '',
     joiningDate: '',
-    status: 'Active',
+    status: 'ACTIVE',
   });
 
   const [errors, setErrors] = useState({});
@@ -31,7 +31,7 @@ const EmployeeForm = ({ employee, onSubmit, isLoading, mode = 'add' }) => {
         position: employee.position || '',
         salary: employee.salary || '',
         joiningDate: employee.joiningDate || '',
-        status: employee.status || 'Active',
+        status: employee.status || 'ACTIVE',
       });
     }
   }, [employee, mode]);
@@ -184,9 +184,9 @@ const EmployeeForm = ({ employee, onSubmit, isLoading, mode = 'add' }) => {
                     onChange={handleChange}
                     error={errors.status}
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="On Leave">On Leave</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                    <option value="ON_LEAVE">On Leave</option>
                   </Select>
                 </FormField>
 
