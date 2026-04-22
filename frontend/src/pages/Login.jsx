@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Building2, Loader2, Lock, User } from 'lucide-react';
+import { Building2, Loader2, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { Button, Input, FormField, Alert } from '../components/ui';
 
 const Login = () => {
@@ -13,6 +13,7 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // NEW: Password visibility state
 
   const handleChange = (e) => {
     setFormData({
@@ -88,15 +89,28 @@ const Login = () => {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'} {/* Toggle between text and password */}
                   name="password"
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="pl-10"
+                  className="pl-10 pr-10" {/* Add right padding for eye icon */}
                   disabled={isLoading}
                   autoComplete="current-password"
                 />
+                {/* NEW: Eye icon to toggle password visibility */}
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
               </div>
             </FormField>
 
@@ -127,7 +141,7 @@ const Login = () => {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-6">
-          © 2024 EMS Pro. All rights reserved.
+          © 2026 EMS Pro. All rights reserved.
         </p>
       </div>
     </div>

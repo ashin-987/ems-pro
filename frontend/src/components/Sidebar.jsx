@@ -18,24 +18,28 @@ const Sidebar = ({ isOpen, onClose }) => {
       href: '/dashboard',
       icon: LayoutDashboard,
       show: canViewDashboard,
+      end: true, // Only match exact path
     },
     {
       name: 'Employees',
       href: '/employees',
       icon: Users,
       show: true,
+      end: true, // FIX: Only match exact path, not /employees/add
     },
     {
       name: 'Add Employee',
       href: '/employees/add',
       icon: UserPlus,
       show: user?.role === 'ADMIN' || user?.role === 'HR',
+      end: false,
     },
     {
       name: 'My Profile',
       href: '/profile',
       icon: UserCircle,
       show: true,
+      end: true,
     },
   ];
 
@@ -73,6 +77,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <NavLink
                   key={item.name}
                   to={item.href}
+                  end={item.end}
                   className={({ isActive }) =>
                     `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
                       isActive
@@ -143,6 +148,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <NavLink
                   key={item.name}
                   to={item.href}
+                  end={item.end}
                   onClick={onClose}
                   className={({ isActive }) =>
                     `group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
