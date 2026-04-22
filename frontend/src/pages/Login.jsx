@@ -89,16 +89,15 @@ const Login = () => {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
-                  type={showPassword ? 'text' : 'password'} {/* Toggle between text and password */}
+                  type={showPassword ? 'text' : 'password'}
                   name="password"
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="pl-10 pr-10" {/* Add right padding for eye icon */}
+                  className="pl-10 pr-10"
                   disabled={isLoading}
                   autoComplete="current-password"
                 />
-                {/* NEW: Eye icon to toggle password visibility */}
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -141,7 +140,7 @@ const Login = () => {
 
         {/* Footer */}
         <p className="text-center text-sm text-gray-600 mt-6">
-          © 2026 EMS Pro. All rights reserved.
+          © 2024 EMS Pro. All rights reserved.
         </p>
       </div>
     </div>
